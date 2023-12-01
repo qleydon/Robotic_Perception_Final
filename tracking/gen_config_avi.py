@@ -45,7 +45,7 @@ def gen_config(args):
         frame = None
 
     elif args.avi != '':
-        cap = cv2.VideoCapture('/home/quinn/Robotics_Final/PyMDNet/datasets/avi/test_video.avi')
+        cap = cv2.VideoCapture('/home/quinn/Robotics_Final/PyMDNet/Robotic_Perception_Final/datasets/avi/test_video.avi')
         ret, frame = cap.read()
         frame_height, frame_width = frame.shape[:2]
         if not ret:
@@ -57,7 +57,7 @@ def gen_config(args):
         savefig_dir = cv2.VideoWriter(f'/datasets/avi/results/PyMDNet.avi', 
                          cv2.VideoWriter_fourcc(*'XVID'), 60.0, 
                          (frame_width, frame_height), True)
-        result_path = '/home/quinn/Robotics_Final/PyMDNet/datasets/avi/results/'
+        result_path = '/home/quinn/Robotics_Final/PyMDNet/Robotic_Perception_Final/results/test_avi'
 
 
     '''
