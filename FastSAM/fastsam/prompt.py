@@ -97,7 +97,7 @@ class FastSAMPrompt:
              bboxes=None,
              points=None,
              point_label=None,
-             mask_random_color=True,
+             mask_random_color=False,
              better_quality=True,
              retina=False,
              withContours=True) -> np.ndarray:
@@ -195,7 +195,7 @@ class FastSAMPrompt:
              bboxes=None,
              points=None,
              point_label=None,
-             mask_random_color=True,
+             mask_random_color=False,
              better_quality=True,
              retina=False,
              withContours=True):
@@ -211,14 +211,13 @@ class FastSAMPrompt:
             retina, 
             withContours,
         )
-        print("got here")
+
         path = os.path.dirname(os.path.abspath(output_path))
         if not os.path.exists(path):
             os.makedirs(path)
         result = result[:, :, ::-1]
-
-        return(result)
-        cv2.imwrite(output_path, result)
+        #cv2.imwrite(output_path, result)
+        return result
      
     #   CPU post process
     def fast_show_mask(
@@ -245,7 +244,7 @@ class FastSAMPrompt:
         if random_color:
             color = np.random.random((msak_sum, 1, 1, 3))
         else:
-            color = np.ones((msak_sum, 1, 1, 3)) * np.array([30 / 255, 144 / 255, 255 / 255])
+            color = np.ones((msak_sum, 1, 1, 3)) * np.array([1 / 255, 1 / 255, 255 / 255])
         transparency = np.ones((msak_sum, 1, 1, 1)) * 0.6
         visual = np.concatenate([color, transparency], axis=-1)
         mask_image = np.expand_dims(annotation, -1) * visual
@@ -316,10 +315,8 @@ class FastSAMPrompt:
         # Use vectorized indexing to update the values of 'show'.
         show[h_indices, w_indices, :] = mask_image[indices]
         show_cpu = show.cpu().numpy()
-        bboxes = [bboxes]
         if bboxes is not None:
             for bbox in bboxes:
-                #print("bbox 319 =",bbox, "bboxes 319 = ",bboxes)
                 x1, y1, x2, y2 = bbox
                 ax.add_patch(plt.Rectangle((x1, y1), x2 - x1, y2 - y1, fill=False, edgecolor='b', linewidth=1))
         # draw point
@@ -386,7 +383,6 @@ class FastSAMPrompt:
             bboxes = [bbox]
         max_iou_index = []
         for bbox in bboxes:
-            #print("bbox=",bbox)
             assert (bbox[2] != 0 and bbox[3] != 0)
             masks = self.results[0].masks.data
             target_height = self.img.shape[0]

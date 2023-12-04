@@ -21,6 +21,10 @@ from data_prov import RegionExtractor
 from bbreg import BBRegressor
 from gen_config_avi import gen_config
 
+from FastSAM.fastSAM_inference import FastSAM_segmentation
+from FastSAM.fastsam.model import FastSAM
+from FastSAM.fastsam.prompt import FastSAMPrompt
+
 opts = yaml.safe_load(open('tracking/options.yaml','r'))
 
 avi = False
@@ -105,6 +109,8 @@ def train(model, criterion, optimizer, pos_feats, neg_feats, maxiter, in_layer='
 
 
 def run_mdnet(video, init_bbox, frame=None, gt=None, output='', display=False):
+    SAM_model = FastSAM("C:/Y6_S1/Robotics/Robotic_Perception_Final/FastSAM/weights/FastSAM-x.pt")
+
     video_length = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     # Init bbox
     target_bbox = np.array(init_bbox)
@@ -174,13 +180,20 @@ def run_mdnet(video, init_bbox, frame=None, gt=None, output='', display=False):
 
     spf_total = time.time() - tic
 
+    # Segmentation
+    result_s = result_bb[0]
+    result_s =result_s.astype(int).tolist()
+    #print(result_bb)
+    SAM_result = FastSAM_segmentation(frame, result_s, SAM_model)
     # Display
     #savefig = savefig_dir != ''
     if display: # or savefig:
-        p1 = (int(result_bb[0,0]), int(result_bb[0,1]))
-        p2 = (int(result_bb[0,0] + result_bb[0,2]), int(result_bb[0,1] + result_bb[0,3]))
-        cv2.rectangle(frame, p1, p2, (255,0,0), 2, 1)
-        cv2.imshow("Tracking", frame)
+        cv2.imshow("Tracking",SAM_result)
+
+        #p1 = (int(result_bb[0,0]), int(result_bb[0,1]))
+        #p2 = (int(result_bb[0,0] + result_bb[0,2]), int(result_bb[0,1] + result_bb[0,3]))
+        #cv2.rectangle(frame, p1, p2, (255,0,0), 2, 1)
+        #cv2.imshow("Tracking", frame)
         #if savefig:
         #    fig.savefig(os.path.join(savefig_dir, '0000.jpg'), dpi=dpi)
 
@@ -257,21 +270,30 @@ def run_mdnet(video, init_bbox, frame=None, gt=None, output='', display=False):
         torch.cuda.empty_cache()
         spf = time.time() - tic
         spf_total += spf
-
+        # Segmentation
+        result_s = result_bb[i]
+        result_s =result_s.astype(int).tolist()
+        SAM_result = FastSAM_segmentation(frame, result_s, SAM_model)
         # Display
         if display:
-            p1 = (int(result_bb[i,0]), int(result_bb[i,1]))
-            p2 = (int(result_bb[i,0] + result_bb[i,2]), int(result_bb[i,1] + result_bb[i,3]))
-            #cv2.rectangle(frame, p1, p2, (255,0,0), 2, 1)
-
             plt.pause(.01)
-            cv2.rectangle(frame, p1, p2, (255,0,0), 2, 1)
-            cv2.putText(frame, "PyMDNet Tracker", (100,20), 
-            cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50,170,50),2)
-            cv2.imshow("Tracking", frame)
-            output.write(frame)
+            cv2.imshow("Tracking", SAM_result)
+            output.write(SAM_result)
             k = cv2.waitKey(1) & 0xff
             if k == 27 : break
+
+            #p1 = (int(result_bb[i,0]), int(result_bb[i,1]))
+            #p2 = (int(result_bb[i,0] + result_bb[i,2]), int(result_bb[i,1] + result_bb[i,3]))
+            #cv2.rectangle(frame, p1, p2, (255,0,0), 2, 1)
+
+            #plt.pause(.01)
+            #cv2.rectangle(frame, p1, p2, (255,0,0), 2, 1)
+            #cv2.putText(frame, "PyMDNet Tracker", (100,20), 
+            #cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50,170,50),2)
+            #cv2.imshow("Tracking", frame)
+            #output.write(frame)
+            #k = cv2.waitKey(1) & 0xff
+            #if k == 27 : break
                 
             
         if gt is None:
@@ -279,8 +301,8 @@ def run_mdnet(video, init_bbox, frame=None, gt=None, output='', display=False):
                 .format(i, video_length, target_score, spf))
         else:
             overlap[i] = overlap_ratio(gt[i], result_bb[i])[0]
-            #print('Frame {:d}/{:d}, Overlap {:.3f}, Score {:.3f}, Time {:.3f}'
-            #    .format(i, video_length, overlap[i], target_score, spf))
+            print('Frame {:d}/{:d}, Overlap {:.3f}, Score {:.3f}, Time {:.3f}'
+                .format(i, video_length, overlap[i], target_score, spf))
 
     if display:
         video.release()
